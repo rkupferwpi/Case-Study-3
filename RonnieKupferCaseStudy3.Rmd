@@ -1,0 +1,338 @@
+---
+title: "Case Study 3"
+author: "Ronnie Kupfer"
+date: "2024-07-21"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r, echo=T, eval=T, error=TRUE}
+library(plsdepot)
+library(ggplot2)
+library(visreg)
+library(caret)
+# Working directory
+wd = "C:/Users/ronku/OneDrive/Desktop/WPI Master's Program/DS 501/Case Study 3"
+setwd(wd)
+library(readxl)
+# Create data frame
+concrete = read_excel("Concrete_Data.xls")
+# Simplify column names without modifying source data file
+colnames(concrete)[c(1,2,3,4,5,6,7,8,9)] = c("Cement","Slag","Ash","Water", "Superplasticizer","C_Aggregate","F_Aggregate","Age","Compressive_Strength")
+#View(concrete)
+attach(concrete)
+#detach(concrete)
+#str(concrete)
+head(concrete)
+```
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Exploratory Data Analysis - 
+
+The author of the posted data stated that there is a strong non-linear relationship between age and compressive strength.  The following plots examine the relationship of each input variable to the output variable, compressive strength.  
+
+```{r scatter plot Compressive_Strength to Cement, echo=T, eval=T, error=TRUE}
+strengthVsCement = qplot(Cement, Compressive_Strength, main = "Compressive Strength vs Cement")
+strengthVsCement
+```
+```{r scatter plot Compressive_Strength to Slag, echo=T, eval=T, error=TRUE}
+strengthVsSlag = qplot(Slag, Compressive_Strength, main = "Compressive Strength vs Slag")
+strengthVsSlag
+```
+
+```{r scatter plot Compressive_Strength to Ash, echo=T, eval=T, error=TRUE}
+strengthVsAsh = qplot(Ash, Compressive_Strength, main = "Compressive Strength vs Ash")
+strengthVsAsh
+```
+
+```{r scatter plot Compressive_Strength to Water, echo=T, eval=T, error=TRUE}
+strengthVsWater = qplot(Water, Compressive_Strength, main = "Compressive Strength vs Water")
+strengthVsWater
+```
+
+```{r scatter plot Compressive_Strength to Plasticizer, echo=T, eval=T, error=TRUE}
+strengthVsPlasticizer = qplot(Superplasticizer, Compressive_Strength, main = "Compressive Strength vs SuperPlasticizer")
+strengthVsPlasticizer
+```
+
+```{r scatter plot Compressive_Strength to Course Aggregate, echo=T, eval=T, error=TRUE}
+strengthVsC_Aggregate = qplot(C_Aggregate, Compressive_Strength, main = "Compressive Strength vs Course Aggregate")
+strengthVsC_Aggregate
+```
+
+```{r scatter plot Compressive_Strength to Fine Aggregate, echo=T, eval=T, error=TRUE}
+strengthVsF_Aggregate = qplot(F_Aggregate, Compressive_Strength, main = "Compressive Strength vs Fine Aggregate")
+strengthVsF_Aggregate
+```
+
+```{r scatter plot Compressive_Strength to Age, echo=T, eval=T, error=TRUE}
+strengthVsAge = qplot(Age, Compressive_Strength, main = "Compressive Strength vs Age")
+strengthVsAge
+```
+#```{r scatter plot Compressive_Strength to Age, echo=T, eval=T, error=TRUE}
+#plot(concrete)
+#```
+Reviewing scatter plots each of the input variables to the output variable, Compressive Strength, once can draw three conclusions:
+1) It appears that as the amount of cement added to the mixture increases the compressive strength of the concrete increases in a fairly linear manner.
+2) The data provider's statement that there is a highly nonlinear function of concrete compressive strength to age and ingredients seems to have merit.
+3) Most of the input variables seem to have optimal ranges. 
+
+```{r correlations, echo=T, eval=T, error=TRUE}
+corStrengthToCement = cor(Compressive_Strength, Cement)
+corStrengthToCement
+corStrengthToSlag = cor(Compressive_Strength, Slag)
+corStrengthToSlag
+corStrengthToAsh = cor(Compressive_Strength, Ash)
+corStrengthToAsh
+corStrengthToWater = cor(Compressive_Strength, Water)
+corStrengthToWater
+corStrengthToPlasticizer = cor(Compressive_Strength, Superplasticizer)
+corStrengthToPlasticizer
+corStrengthToC_Aggregate = cor(Compressive_Strength, C_Aggregate)
+corStrengthToC_Aggregate
+corStrengthToF_Aggregate = cor(Compressive_Strength, F_Aggregate)
+corStrengthToF_Aggregate
+corStrengthToAge = cor(Compressive_Strength, Age)
+corStrengthToAge
+```
+The correlation between the strength of the concrete to the amount of cement is nearly .5.  This is the strongest correlation of input variable to the output variable and reflects the trend in the graph. Several of the input variables have a slightly negative correlation. If the relationship is non-linear, the negative correlations may not indicate anything about dependence of the variables.
+
+### Split the data as Training and Test sets
+```{r split data, echo=T, eval=T, error=TRUE}
+set.seed(2024)
+concreteDF = data.frame(concrete)
+splitConcrete = caret::createDataPartition(concreteDF[,1], p = 0.8, list=F, times=1)
+#splitConcrete
+trainConcrete = concreteDF[splitConcrete,]
+head(trainConcrete)
+testConcrete = concreteDF[-splitConcrete,]
+#testConcrete
+```
+
+# Generating a multiple linear regression model
+
+```{r multiple linear regression 1, echo=T, eval=T, error=TRUE}
+mlr = lm(Compressive_Strength ~ Cement + Slag + Ash + Water + Superplasticizer + C_Aggregate + F_Aggregate + Age, data=trainConcrete)
+#fitted(mlr)
+#resid(mlr)
+#mlr
+summary(mlr)
+#plot(mlr)
+```
+```{r linear regression plot 1, echo=T, eval=T, error=TRUE}
+p1 = strengthVsCement + geom_abline(intercept = mlr[1]$coefficients[1], slope = mlr[1]$coefficients[2], color="red")
+p1
+
+```
+```{r prediction 2, echo=T, eval=T, error=TRUE}
+predict(mlr, newdata=testConcrete)
+predCompressive_Strength = data.frame(predict(mlr, newdata=testConcrete))
+names(predCompressive_Strength)[1] = 'Predicted'
+predCompressive_Strength$Reference = testConcrete[,c('Compressive_Strength')]
+plotpredmlr = qplot(Reference, Predicted, data=predCompressive_Strength) + geom_point(colour = "blue", size = 3)
+plotpredmlr
+
+```
+### Model evaluation - $RMSEP$ and $R^{2}$
+* Calculating predicted residual sum of squares (PRESS) 
+$$PRESS = \sum_{i=1}^{n} (y^{ref}_{i}-y^{pred}_{i})^{2}$$
+   
+```{r PRESS, echo=T, eval=T, error=TRUE}
+PRESS = sum((predCompressive_Strength$Reference - predCompressive_Strength$Predicted)^2)
+PRESS
+```
+* Root mean squared error of prediction (RMSEP)
+$$RMSEP = \sqrt{\frac{1}{n_{T}}\sum_{1}^{n_{T}} (y_{i}^{ref} - y_{i}^{pred})^{2}}$$
+```{r RMSEP, echo=T, eval=T, error=TRUE}
+RMSEP = sqrt(PRESS/ nrow(predCompressive_Strength))
+RMSEP
+```
+* Total sum of squares (SST)
+$$SST = \sum_{i=1}^{n} (y^{ref}_{i}-y^{mean}_{i})^{2}$$
+```{r SST, echo=T, eval=T, error=TRUE}
+SST = sum((predCompressive_Strength$Reference - mean(predCompressive_Strength$Reference))^2)
+SST
+```
+* Calculating $R^{2}$
+$$R^{2} = 1 - \frac{PRESS}{SST}$$
+```{r R2, echo=T, eval=T, error=TRUE}
+R2 = 1 - (PRESS/SST)
+R2
+```
+### Predicted versus Reference
+
+* Confidence Intervals (Narrow)
+```{r Confidence, echo=T, eval=T, error=TRUE}
+predCompressive_Strength$lower = predict(mlr, newdata=testConcrete, interval = "confidence")[,2]
+predCompressive_Strength$upper = predict(mlr, newdata=testConcrete, interval = "confidence")[,3]
+#predCompressive_Strength
+qplot(Reference, Predicted, data=predCompressive_Strength) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+* Prediction Intervals (Tolerance/Wide)
+```{r Prediction 3, echo=T, eval=T, error=TRUE}
+predCompressive_Strength$lower = predict(mlr, newdata=testConcrete, interval = "prediction")[,2]
+predCompressive_Strength$upper = predict(mlr, newdata=testConcrete, interval = "prediction")[,3]
+#predCompressive_Strength
+qplot(Reference, Predicted, data=predCompressive_Strength) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+### Visualizing using `visreg` package
+```{r}
+visreg::visreg(mlr)
+```
+
+Reviewing the statistics above would indicate that Cement, Slag, Ash, and Age are the most significant input variables in the linear model.  The following code creates a new model with only these input variables.
+
+```{r linear regression 2, echo=T, eval=T, error=TRUE}
+mlr2 = lm(Compressive_Strength ~ Cement + Slag + Ash + Age, data=trainConcrete)
+#fitted(mlr2)
+#resid(mlr2)
+#mlr2
+summary(mlr2)
+#plot(mlr2)
+p2 = strengthVsCement + geom_abline(intercept = mlr2[1]$coefficients[1], slope = mlr2[1]$coefficients[2], color="red")
+p2
+
+```
+```{r prediction 4, echo=T, eval=T, error=TRUE}
+predict(mlr2, newdata=testConcrete)
+predCompressive_Strength2 = data.frame(predict(mlr2, newdata=testConcrete))
+names(predCompressive_Strength2)[1] = 'Predicted'
+predCompressive_Strength2$Reference = testConcrete[,c('Compressive_Strength')]
+plotpredmlr2 = qplot(Reference, Predicted, data=predCompressive_Strength2) + geom_point(colour = "blue", size = 3)
+plotpredmlr2
+
+```
+
+### Model evaluation - $RMSEP$ and $R^{2}$
+* Calculating predicted residual sum of squares (PRESS) 
+$$PRESS = \sum_{i=1}^{n} (y^{ref}_{i}-y^{pred}_{i})^{2}$$
+   
+```{r PRESS 1, echo=T, eval=T, error=TRUE}
+PRESS2 = sum((predCompressive_Strength2$Reference - predCompressive_Strength2$Predicted)^2)
+PRESS2
+```
+* Root mean squared error of prediction (RMSEP)
+$$RMSEP = \sqrt{\frac{1}{n_{T}}\sum_{1}^{n_{T}} (y_{i}^{ref} - y_{i}^{pred})^{2}}$$
+```{r RMSEP 1, echo=T, eval=T, error=TRUE}
+RMSEP2 = sqrt(PRESS2/ nrow(predCompressive_Strength2))
+RMSEP2
+```
+* Total sum of squares (SST)
+$$SST = \sum_{i=1}^{n} (y^{ref}_{i}-y^{mean}_{i})^{2}$$
+```{r SST 1, echo=T, eval=T, error=TRUE}
+SST2 = sum((predCompressive_Strength2$Reference - mean(predCompressive_Strength2$Reference))^2)
+SST2
+```
+* Calculating $R^{2}$
+$$R^{2} = 1 - \frac{PRESS}{SST}$$
+```{r R2 1, echo=T, eval=T, error=TRUE}
+R22 = 1 - (PRESS2/SST2)
+R22
+```
+### Predicted versus Reference
+
+* Confidence Intervals (Narrow)
+```{r Confidence 1, echo=T, eval=T, error=TRUE}
+predCompressive_Strength2$lower = predict(mlr2, newdata=testConcrete, interval = "confidence")[,2]
+predCompressive_Strength2$upper = predict(mlr2, newdata=testConcrete, interval = "confidence")[,3]
+#predCompressive_Strength2
+qplot(Reference, Predicted, data=predCompressive_Strength2) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+
+* Prediction Intervals (Tolerance/Wide)
+```{r Prediction 5, echo=T, eval=T, error=TRUE}
+predCompressive_Strength2$lower = predict(mlr2, newdata=testConcrete, interval = "prediction")[,2]
+predCompressive_Strength2$upper = predict(mlr2, newdata=testConcrete, interval = "prediction")[,3]
+#predCompressive_Strength2
+qplot(Reference, Predicted, data=predCompressive_Strength2) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+### Visualizing using `visreg` package
+```{r}
+visreg::visreg(mlr2)
+```
+
+# Generating a polynomial multiple linear regression model
+
+```{r linear regression 1, echo=T, eval=T, error=TRUE}
+polymlr = lm(Compressive_Strength ~ poly(Cement + Slag + Ash + Water + Superplasticizer + C_Aggregate + F_Aggregate + Age, 5), data=trainConcrete)
+#fitted(polymlr)
+#resid(polymlr)
+#polymlr
+summary(polymlr)
+#plot(polymlr)
+polyp1 = strengthVsCement + geom_abline(intercept = polymlr[1]$coefficients[1], slope = polymlr[1]$coefficients[2], color="red")
+polyp1
+ggplot(trainConcrete, aes(Water, Compressive_Strength) ) + geom_point() + 
+stat_smooth(method = lm, formula = y ~ poly(x, 2, raw = TRUE))
+
+```
+
+```{r prediction 6, echo=T, eval=T, error=TRUE}
+predict(polymlr, newdata=testConcrete)
+predCompressive_Strength3 = data.frame(predict(polymlr, newdata=testConcrete))
+names(predCompressive_Strength3)[1] = 'Predicted'
+predCompressive_Strength3$Reference = testConcrete[,c('Compressive_Strength')]
+plotpredpolymlr = qplot(Reference, Predicted, data=predCompressive_Strength3) + geom_point(colour = "blue", size = 3)
+plotpredpolymlr
+```
+
+### Model evaluation - $RMSEP$ and $R^{2}$
+* Calculating predicted residual sum of squares (PRESS) 
+$$PRESS = \sum_{i=1}^{n} (y^{ref}_{i}-y^{pred}_{i})^{2}$$
+   
+```{r PRESS 2, echo=T, eval=T, error=TRUE}
+PRESS3 = sum((predCompressive_Strength3$Reference - predCompressive_Strength3$Predicted)^2)
+PRESS3
+```
+* Root mean squared error of prediction (RMSEP)
+$$RMSEP = \sqrt{\frac{1}{n_{T}}\sum_{1}^{n_{T}} (y_{i}^{ref} - y_{i}^{pred})^{2}}$$
+```{r RMSEP 2, echo=T, eval=T, error=TRUE}
+RMSEP3 = sqrt(PRESS3/ nrow(predCompressive_Strength3))
+RMSEP3
+```
+* Total sum of squares (SST)
+$$SST = \sum_{i=1}^{n} (y^{ref}_{i}-y^{mean}_{i})^{2}$$
+```{r SST 2, echo=T, eval=T, error=TRUE}
+SST3 = sum((predCompressive_Strength3$Reference - mean(predCompressive_Strength3$Reference))^2)
+SST3
+```
+* Calculating $R^{2}$
+$$R^{2} = 1 - \frac{PRESS}{SST}$$
+```{r R2 2, echo=T, eval=T, error=TRUE}
+R23 = 1 - (PRESS3/SST3)
+R23
+```
+### Predicted versus Reference
+
+* Confidence Intervals (Narrow)
+```{r Confidence 2, echo=T, eval=T, error=TRUE}
+predCompressive_Strength3$lower = predict(polymlr, newdata=testConcrete, interval = "confidence")[,2]
+predCompressive_Strength3$upper = predict(polymlr, newdata=testConcrete, interval = "confidence")[,3]
+#predCompressive_Strength3
+qplot(Reference, Predicted, data=predCompressive_Strength3) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+* Prediction Intervals (Tolerance/Wide)
+```{r Prediction 1, echo=T, eval=T, error=TRUE}
+predCompressive_Strength3$lower = predict(polymlr, newdata=testConcrete, interval = "prediction")[,2]
+predCompressive_Strength3$upper = predict(polymlr, newdata=testConcrete, interval = "prediction")[,3]
+#predCompressive_Strength3
+qplot(Reference, Predicted, data=predCompressive_Strength3) + geom_point(colour = "blue", size = 3) + 
+  geom_errorbar(aes(ymin = lower,ymax = upper))
+```
+### Visualizing using `visreg` package
+```{r}
+visreg::visreg(polymlr)
+```
